@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: grpc-book-client
+  grpc:
+    client:
+      channels:
+        book-server:
+          address: "static://localhost:8081"
+
+server:
+  port: 8080
+
+logging:
+  level:
+    com.test.grpc_test.client: DEBUG
+    io.grpc: INFO

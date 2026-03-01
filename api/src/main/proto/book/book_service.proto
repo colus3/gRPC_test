@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package book;
+
+option java_package = "com.test.grpc_test.api.book";
+option java_multiple_files = true;
+option java_outer_classname = "BookServiceProto";
+
+// ─────────────────────────────────────────
+// Domain messages
+// ─────────────────────────────────────────
+
+message Book {
+  string id     = 1;
+  string title  = 2;
+  string author = 3;
+  string isbn   = 4;
+  int32  year   = 5;
+  string genre  = 6;
+  double price  = 7;
+}
+
+// ─────────────────────────────────────────
+// Request / Response messages
+// ─────────────────────────────────────────
+
+// Unary: ID로 특정 책 조회
+message GetBookRequest {
+  string id = 1;
+}
+
+message GetBookResponse {
+  Book book  = 1;
+  bool found = 2;
+}
+
+// Server Streaming: 장르 필터링으로 책 목록 스트리밍
+message ListBooksRequest {
+  string genre     = 1; // 비어있으면 전체
+  int32  page_size = 2; // 0이면 서버 기본값(20) 사용
+}
+
+// Server Streaming: 제목/저자 키워드 검색
+message SearchBooksRequest {
+  string query       = 1; // 검색어 (필수)
+  int32  max_results = 2; // 0이면 서버 기본값(10) 사용
+}
+
+// ─────────────────────────────────────────
+// Service definition
+// ─────────────────────────────────────────
+
+service BookService {
+  // Unary RPC — 특정 책 조회
+  rpc GetBook(GetBookRequest) returns (GetBookResponse);
+
+  // Server Streaming RPC — 카탈로그 전체/장르별 스트리밍
+  rpc ListBooks(ListBooksRequest) returns (stream Book);
+
+  // Server Streaming RPC — 키워드 검색 스트리밍
+  rpc SearchBooks(SearchBooksRequest) returns (stream Book);
+}
