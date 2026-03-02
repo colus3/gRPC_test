@@ -35,7 +35,7 @@ gRPC_test/
    ▼
 ┌─────────┐        gRPC (8081)       ┌─────────┐
 │ client  │ ──────────────────────▶  │ server  │
-│  REST   │    Protobuf (바이너리)   │  gRPC   │
+│  REST   │    Protobuf (바이너리)    │  gRPC   │
 └─────────┘                          └────┬────┘
                                           │ JPA + QueryDSL
                                           ▼
