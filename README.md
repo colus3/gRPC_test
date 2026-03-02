@@ -29,19 +29,21 @@ gRPC_test/
 
 ### 모듈별 역할
 
-```
-[사용자]
-   │ HTTP REST (8080)
-   ▼
-┌─────────┐        gRPC (8081)       ┌─────────┐
-│ client  │ ──────────────────────▶  │ server  │
-│  REST   │    Protobuf (바이너리)     │  gRPC   │
-└─────────┘                          └────┬────┘
-                                          │ JPA + QueryDSL
-                                          ▼
-                                     ┌─────────┐
-                                     │  MySQL  │
-                                     └─────────┘
+```mermaid
+graph TD
+    User([사용자])
+    User -->|HTTP REST 8080| Client
+
+    subgraph Client [client 모듈 :8080]
+        REST[REST Controller]
+    end
+
+    subgraph Server [server 모듈 :8081]
+        GRPC[gRPC Service]
+    end
+
+    Client -->|gRPC / Protobuf :8081| Server
+    GRPC -->|JPA + QueryDSL| DB[(MySQL)]
 ```
 
 ---
