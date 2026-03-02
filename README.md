@@ -35,7 +35,7 @@ gRPC_test/
    ▼
 ┌─────────┐        gRPC (8081)       ┌─────────┐
 │ client  │ ──────────────────────▶  │ server  │
-│  REST   │    Protobuf (바이너리)    │  gRPC   │
+│  REST   │    Protobuf (바이너리)   │  gRPC   │
 └─────────┘                          └────┬────┘
                                           │ JPA + QueryDSL
                                           ▼
@@ -82,15 +82,18 @@ gRPC 서비스를 구현하는 Spring Boot 애플리케이션입니다.
 com.test.grpc_test.server
 ├── ServerApplication.kt
 ├── config/
-│   ├── QueryDslConfig.kt       # JPAQueryFactory Bean
-│   └── DataInitializer.kt      # 서버 시작 시 초기 데이터 insert
+│   ├── QueryDslConfig.kt           # JPAQueryFactory Bean
+│   └── DataInitializer.kt          # 서버 시작 시 초기 데이터 insert
 ├── domain/
-│   ├── BookEntity.kt           # JPA Entity (@Entity)
-│   ├── BookJpaRepository.kt    # Spring Data JPA Repository
-│   ├── BookQueryRepository.kt  # QueryDSL 기반 조회 (장르 필터, 키워드 검색)
-│   └── BookRepository.kt       # DB Entity ↔ Proto Message 변환 어댑터
+│   ├── BookEntity.kt               # JPA Entity (@Entity)
+│   ├── BookJpaRepository.kt        # Spring Data JPA Repository
+│   ├── BookQueryRepository.kt      # QueryDSL 기반 조회 (장르 필터, 키워드 검색)
+│   └── BookRepository.kt           # BookEntity 조회 어댑터
+├── interceptor/
+│   ├── GlobalLoggingInterceptor.kt # 글로벌 인터셉터 (@GlobalServerInterceptor)
+│   └── LoggingInterceptor.kt       # 서비스별 인터셉터 (@Component)
 └── service/
-    └── BookGrpcService.kt      # gRPC RPC 구현체 (@Service)
+    └── BookGrpcService.kt          # gRPC RPC 구현체 (@GrpcService)
 ```
 
 **RPC 구현**
@@ -196,3 +199,47 @@ curl "http://localhost:8080/books/search?q=Martin"
 ### QueryDSL 적용
 동적 조건 쿼리가 필요한 장르 필터(`findByGenre`)와 키워드 검색(`search`)에 QueryDSL을 적용했습니다.
 kapt로 `QBookEntity`를 빌드 시 자동 생성합니다.
+
+### gRPC 인터셉터
+
+Spring gRPC에서 인터셉터는 등록 방식에 따라 적용 범위가 달라집니다.
+
+#### 글로벌 인터셉터
+
+`@GlobalServerInterceptor`를 사용하면 모든 gRPC 서비스에 자동으로 적용됩니다.
+`@GlobalServerInterceptor`는 글로벌 인터셉터 마커 역할이고, 빈 등록은 `@Component`가 담당합니다. 두 어노테이션을 함께 사용해야 합니다.
+
+```kotlin
+@Component
+@GlobalServerInterceptor
+class GlobalLoggingInterceptor : ServerInterceptor {
+    // 모든 gRPC 서비스 호출에 적용
+}
+```
+
+#### 서비스별 인터셉터
+
+`@Component`로만 등록하면 Spring 빈으로는 존재하지만 gRPC 인터셉터로는 자동 등록되지 않습니다.
+`@GrpcService(interceptors = [...])` 에 명시한 서비스에만 적용됩니다.
+
+```kotlin
+@Component
+class LoggingInterceptor : ServerInterceptor {
+    // @GrpcService 에 명시된 서비스에만 적용
+}
+
+@GrpcService(interceptors = [LoggingInterceptor::class])
+class BookGrpcService : BookServiceGrpc.BookServiceImplBase() {
+    // GlobalLoggingInterceptor + LoggingInterceptor 둘 다 적용
+}
+```
+
+#### 적용 순서
+
+```
+글로벌 인터셉터 (@GlobalServerInterceptor, @Order 순)
+  → 서비스별 인터셉터 (@GrpcService interceptors 순)
+    → 서비스 로직
+```
+
+`blendWithGlobalInterceptors = "true"` 옵션을 사용하면 글로벌/서비스별 구분 없이 `@Order` 기준으로 함께 정렬됩니다.

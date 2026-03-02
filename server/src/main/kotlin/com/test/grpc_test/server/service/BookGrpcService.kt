@@ -6,12 +6,14 @@ import com.test.grpc_test.api.book.GetBookRequest
 import com.test.grpc_test.api.book.GetBookResponse
 import com.test.grpc_test.api.book.ListBooksRequest
 import com.test.grpc_test.api.book.SearchBooksRequest
+import com.test.grpc_test.server.domain.BookEntity
 import com.test.grpc_test.server.domain.BookRepository
+import com.test.grpc_test.server.interceptor.LoggingInterceptor
 import io.grpc.stub.StreamObserver
 import org.slf4j.LoggerFactory
 import org.springframework.grpc.server.service.GrpcService
 
-@GrpcService
+@GrpcService(interceptors = [LoggingInterceptor::class])
 class BookGrpcService(
     private val bookRepository: BookRepository
 ) : BookServiceGrpc.BookServiceImplBase() {
@@ -28,7 +30,7 @@ class BookGrpcService(
         val book = bookRepository.findById(request.id)
         val response = GetBookResponse.newBuilder()
             .setFound(book != null)
-            .apply { book?.let { setBook(it) } }
+            .apply { book?.let { setBook(it.toProto()) } }
             .build()
 
         responseObserver.onNext(response)
@@ -46,7 +48,7 @@ class BookGrpcService(
         bookRepository.findByGenre(request.genre)
             .take(pageSize)
             .forEach { book ->
-                responseObserver.onNext(book)
+                responseObserver.onNext(book.toProto())
             }
         responseObserver.onCompleted()
     }
@@ -60,8 +62,18 @@ class BookGrpcService(
 
         bookRepository.search(request.query, request.maxResults)
             .forEach { book ->
-                responseObserver.onNext(book)
+                responseObserver.onNext(book.toProto())
             }
         responseObserver.onCompleted()
     }
 }
+
+private fun BookEntity.toProto(): Book = Book.newBuilder()
+    .setId(id)
+    .setTitle(title)
+    .setAuthor(author)
+    .setIsbn(isbn)
+    .setYear(year)
+    .setGenre(genre)
+    .setPrice(price)
+    .build()

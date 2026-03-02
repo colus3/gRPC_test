@@ -1,6 +1,5 @@
 package com.test.grpc_test.server.domain
 
-import com.test.grpc_test.api.book.Book
 import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Component
 
@@ -9,22 +8,12 @@ class BookRepository(
     private val jpaRepository: BookJpaRepository,
     private val queryRepository: BookQueryRepository
 ) {
-    fun findById(id: String): Book? =
-        jpaRepository.findByIdOrNull(id)?.toProto()
+    fun findById(id: String): BookEntity? =
+        jpaRepository.findByIdOrNull(id)
 
-    fun findByGenre(genre: String): List<Book> =
-        queryRepository.findByGenre(genre).map { it.toProto() }
+    fun findByGenre(genre: String): List<BookEntity> =
+        queryRepository.findByGenre(genre)
 
-    fun search(query: String, maxResults: Int): List<Book> =
-        queryRepository.search(query, maxResults).map { it.toProto() }
-
-    private fun BookEntity.toProto(): Book = Book.newBuilder()
-        .setId(id)
-        .setTitle(title)
-        .setAuthor(author)
-        .setIsbn(isbn)
-        .setYear(year)
-        .setGenre(genre)
-        .setPrice(price)
-        .build()
+    fun search(query: String, maxResults: Int): List<BookEntity> =
+        queryRepository.search(query, maxResults)
 }
